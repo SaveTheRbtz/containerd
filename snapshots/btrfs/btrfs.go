@@ -142,11 +142,6 @@ func (b *snapshotter) usage(ctx context.Context, key string) (snapshots.Usage, e
 		return snapshots.Usage{}, err
 	}
 	id, info, usage, err := storage.GetInfo(ctx, key)
-	var parentID string
-	if err == nil && info.Kind == snapshots.KindActive && info.Parent != "" {
-		parentID, _, _, err = storage.GetInfo(ctx, info.Parent)
-
-	}
 	t.Rollback() // transaction no longer needed at this point.
 
 	if err != nil {
@@ -154,13 +149,10 @@ func (b *snapshotter) usage(ctx context.Context, key string) (snapshots.Usage, e
 	}
 
 	if info.Kind == snapshots.KindActive {
-		var du fs.Usage
 		p := filepath.Join(b.root, "active", id)
-		if parentID != "" {
-			du, err = fs.DiffUsage(ctx, filepath.Join(b.root, "snapshots", parentID), p)
-		} else {
-			du, err = fs.DiskUsage(ctx, p)
-		}
+
+		var du fs.Usage
+		du, err = fs.DiskUsage(ctx, p)
 		if err != nil {
 			// TODO(stevvooe): Consider not reporting an error in this case.
 			return snapshots.Usage{}, err
